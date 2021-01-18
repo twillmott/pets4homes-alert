@@ -1,11 +1,13 @@
 package com.twillmott.pets4homesalert.service;
 
 import com.twillmott.pets4homesalert.entity.PetAdvertEntity;
+import com.twillmott.pets4homesalert.model.ScraperConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.utils.URIBuilder;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -20,10 +22,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PetScraper {
 
-    private final static String PET_URL = "https://www.pets4homes.co.uk/search/?page=1&type_id=3&breed_id=116&results=10&sort=datenew";
-    private final static String DOG_ID = "3";
-    private final static String COCKER_SPANIEL_ID = "116";
-    private final static String SORT = "datenew";
+    private final ScraperConfig scraperConfig;
+
+    @Autowired
+    public PetScraper(ScraperConfig scraperConfig) {
+        this.scraperConfig = scraperConfig;
+    }
 
     public List<PetAdvertEntity> crawl(final ZonedDateTime cutoffTime) throws IOException, ParseException {
 
@@ -35,7 +39,7 @@ public class PetScraper {
             String uri = getUriForPage(page);
             log.info("Crawling for page {}: {}", page, uri);
             Document doc = Jsoup.connect(uri).get();
-            for(Element element : doc.getElementsByClass("profilelisting")) {
+            for (Element element : doc.getElementsByClass("profilelisting")) {
                 try {
                     String url = element.getElementsByClass("headline").get(0).getElementsByTag("a").get(0).attr("href");
                     String headline = element.getElementsByClass("headline").get(0).text();
@@ -75,25 +79,25 @@ public class PetScraper {
                 .setScheme("https")
                 .setHost("www.pets4homes.co.uk")
                 .setPath("/search/")
-                .addParameter("type_id", DOG_ID)
-                .addParameter("breed_id", COCKER_SPANIEL_ID)
-                .addParameter("sort", SORT)
+                .addParameter("type_id", scraperConfig.getAnimalId())
+                .addParameter("breed_id", scraperConfig.getBreedId())
+                .addParameter("sort", scraperConfig.getSort())
                 .addParameter("page", String.valueOf(page))
                 .toString();
     }
 
     private ZonedDateTime getTimeFromAgeString(String age) {
         if (age.toLowerCase().contains("minute")) {
-            return ZonedDateTime.now().minusMinutes(Long.valueOf(age.replaceAll("\\D+","")));
+            return ZonedDateTime.now().minusMinutes(Long.valueOf(age.replaceAll("\\D+", "")));
         }
         if (age.toLowerCase().contains("hour")) {
-            return ZonedDateTime.now().minusHours(Long.valueOf(age.replaceAll("\\D+","")));
+            return ZonedDateTime.now().minusHours(Long.valueOf(age.replaceAll("\\D+", "")));
         }
         if (age.toLowerCase().contains("day")) {
-            return ZonedDateTime.now().minusDays(Long.valueOf(age.replaceAll("\\D+","")));
+            return ZonedDateTime.now().minusDays(Long.valueOf(age.replaceAll("\\D+", "")));
         }
         if (age.toLowerCase().contains("month")) {
-            return ZonedDateTime.now().minusMonths(Long.valueOf(age.replaceAll("\\D+","")));
+            return ZonedDateTime.now().minusMonths(Long.valueOf(age.replaceAll("\\D+", "")));
         }
         return ZonedDateTime.now();
     }
